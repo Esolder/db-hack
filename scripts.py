@@ -1,25 +1,26 @@
-from datacenter.models import Schoolkid, Mark, Chastisement, Lesson, Subject, Commendation
 from random import choice
+
+from datacenter.models import Chastisement, Commendation, Lesson, Mark, Schoolkid, Subject
+
+
+COMMENDATION_TEXTS = ['Хвалю!', 'Отлично!', 'Молодец!', 'Так держать!',
+                      'Один из лучших!', 'Великолепно!', 'Гордимся!', ]
 
 
 def find_schoolkid(name):
     try:
         return Schoolkid.objects.get(full_name__contains=name)
     except Schoolkid.MultipleObjectsReturned:
-        if name:
-            print(f'В базе больше одного ученика с именем, содержащим {name}')
-        else:
-            print('Введено пустое имя')
+        print(f'В базе больше одного ученика с именем, содержащим {name}')
+        return
     except Schoolkid.DoesNotExist:
         print(f'В базе отсутствуют ученики с именем {name}')
+        return
 
 
 def fix_marks(schoolkid):
     marks = Mark.objects.filter(schoolkid=schoolkid)
-    bad_marks = marks.filter(points__lte=3)
-    for bad_mark in bad_marks:
-        bad_mark.points = 5
-        bad_mark.save()
+    marks.filter(points__lte=3).update(points=5)
 
 
 def delete_chastisements(schoolkid):
@@ -34,17 +35,22 @@ def create_commendation(schoolkid, subject_name):
                                       year_of_study=schoolkid_year_of_study)
     except Subject.DoesNotExist:
         print(f'Предмет с названием {subject_name} не найден')
+        return
 
     schoolkid_group_letter = schoolkid.group_letter
     lessons = Lesson.objects.filter(year_of_study=schoolkid_year_of_study,
                                     group_letter=schoolkid_group_letter,
                                     subject=subject)
-    lesson = choice(lessons)
+
+    if not lessons:
+        lesson = choice(lessons)
+    else:
+        print('Уроки не найдены')
+        return
+
     teacher = lesson.teacher
     last_lesson_date = lesson.date
-    texts = ['Хвалю!', 'Отлично!', 'Молодец!', 'Так держать!',
-            'Один из лучших!', 'Великолепно!', 'Гордимся!', ]
-    Commendation.objects.create(text=choice(texts),
+    Commendation.objects.create(text=choice(COMMENDATION_TEXTS),
                                 created=last_lesson_date,
                                 schoolkid=schoolkid,
                                 subject=subject,
